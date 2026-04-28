@@ -4,7 +4,7 @@ import { useAppStore } from '../store/useAppStore'
 import type { Order } from '../types'
 
 export function useOrders() {
-  const { user, apartment, orders, setOrders, setCurrentOrder, updateOrderStatus } =
+  const { user, orders, setOrders, setCurrentOrder, updateOrderStatus } =
     useAppStore()
 
   // Depend on user.id (primitive) not the full user object to avoid

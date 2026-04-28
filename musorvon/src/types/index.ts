@@ -50,6 +50,7 @@ export type Database = {
           floor: number
           apartment_number: string
           user_id: string
+          email?: string | null
           created_at: string
         }
         Insert: {
@@ -59,6 +60,7 @@ export type Database = {
           floor: number
           apartment_number: string
           user_id: string
+          email?: string | null
           created_at?: string
         }
         Update: {
@@ -68,6 +70,7 @@ export type Database = {
           floor?: number
           apartment_number?: string
           user_id?: string
+          email?: string | null
           created_at?: string
         }
         Relationships: []
