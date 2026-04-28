@@ -6,7 +6,10 @@
       "Bash(npx tsc:*)",
       "Bash(npm run:*)",
       "Bash(npm -v)",
-      "Bash(node scripts/generate-icons.mjs)"
+      "Bash(node scripts/generate-icons.mjs)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
