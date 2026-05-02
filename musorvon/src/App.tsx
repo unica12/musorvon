@@ -13,9 +13,6 @@ const RegisterAddressPage = lazy(() =>
 const RegisterPage = lazy(() =>
   import('./pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
 )
-const AuthCallbackPage = lazy(() =>
-  import('./pages/AuthCallbackPage').then((m) => ({ default: m.AuthCallbackPage })),
-)
 const HomePage = lazy(() =>
   import('./pages/HomePage').then((m) => ({ default: m.HomePage })),
 )
@@ -83,9 +80,6 @@ function AppRoutes() {
             user && apartment ? <Navigate to="/home" replace /> : <RegisterPage />
           }
         />
-        {/* Magic link callback — completely public, handles auth token from URL hash */}
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-
         {/* Protected: wait for auth to resolve, then guard */}
         <Route
           path="/home"
