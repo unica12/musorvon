@@ -1,7 +1,7 @@
 [build]
   base = "musorvon"
   command = "npx vite build"
-  publish = "musorvon/dist"
+  publish = "dist"
 
 [[redirects]]
   from = "/*"
