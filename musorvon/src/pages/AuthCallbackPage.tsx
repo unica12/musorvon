@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import type { Session } from '@supabase/supabase-js'
@@ -6,16 +6,22 @@ import { supabase } from '../lib/supabase'
 import { useAppStore } from '../store/useAppStore'
 import { PENDING_ADDRESS_KEY } from './RegisterAddressPage'
 import type { PendingAddress } from './RegisterAddressPage'
-
-// ВАЖНО: В Supabase Dashboard → Authentication → URL Configuration
-// Добавить в Redirect URLs: http://localhost:5173/auth/callback
-// Для продакшена добавить ваш реальный домен тоже
+import { Button } from '../components/ui/Button'
 
 const CALLBACK_TIMEOUT_MS = 15_000
+const APP_URL = 'https://statuesque-choux-de7f07.netlify.app'
+
+function isRunningAsPWA() {
+  return (
+    (navigator as Navigator & { standalone?: boolean }).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
+  )
+}
 
 export function AuthCallbackPage() {
   const navigate = useNavigate()
   const handled = useRef(false)
+  const [showOpenApp, setShowOpenApp] = useState(false)
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -47,7 +53,11 @@ export function AuthCallbackPage() {
 
           if (apartment) {
             useAppStore.getState().setApartment(apartment)
-            navigate('/home', { replace: true })
+            if (isRunningAsPWA()) {
+              navigate('/home', { replace: true })
+            } else {
+              setShowOpenApp(true)
+            }
           } else {
             toast.error('Заполните адрес для продолжения')
             navigate('/register/address', { replace: true })
@@ -69,7 +79,11 @@ export function AuthCallbackPage() {
         if (existingApartment) {
           useAppStore.getState().setApartment(existingApartment)
           localStorage.removeItem(PENDING_ADDRESS_KEY)
-          navigate('/home', { replace: true })
+          if (isRunningAsPWA()) {
+            navigate('/home', { replace: true })
+          } else {
+            setShowOpenApp(true)
+          }
           return
         }
 
@@ -97,7 +111,12 @@ export function AuthCallbackPage() {
         useAppStore.getState().setApartment(apartmentData)
         localStorage.removeItem(PENDING_ADDRESS_KEY)
         localStorage.setItem('musorvon_registered', 'true')
-        navigate('/home', { replace: true })
+
+        if (isRunningAsPWA()) {
+          navigate('/home', { replace: true })
+        } else {
+          setShowOpenApp(true)
+        }
       } catch (err) {
         console.error('[AuthCallbackPage] finishRegistration error:', err)
         localStorage.removeItem(PENDING_ADDRESS_KEY)
@@ -126,6 +145,40 @@ export function AuthCallbackPage() {
       clearTimeout(timeoutId)
     }
   }, [navigate])
+
+  if (showOpenApp) {
+    return (
+      <div className="flex items-center justify-center min-h-dvh bg-[#F7FAF6]">
+        <div className="flex flex-col items-center gap-6 text-center px-8">
+          <div className="w-20 h-20 rounded-3xl bg-[#33A65A] flex items-center justify-center">
+            <svg width="44" height="44" viewBox="0 0 64 64" fill="none">
+              <path d="M16 20h32l-4 28H20L16 20z" fill="white" fillOpacity="0.9" />
+              <path
+                d="M12 20h40M24 20v-4a4 4 0 018 0v4"
+                stroke="white"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-[#1A1F1A]">Вход выполнен!</h2>
+            <p className="text-sm text-[#7F8A80] mt-2 leading-relaxed">
+              Чтобы продолжить, откройте приложение на рабочем столе
+            </p>
+          </div>
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => { window.location.href = APP_URL + '/home' }}
+          >
+            Открыть МусорВон
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex items-center justify-center min-h-dvh bg-[#F7FAF6]">

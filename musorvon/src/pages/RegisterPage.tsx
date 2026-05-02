@@ -35,7 +35,7 @@ export function RegisterPage() {
       supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin + '/auth/callback',
+          emailRedirectTo: 'https://statuesque-choux-de7f07.netlify.app/auth/callback',
           shouldCreateUser: true,
         },
       }),
