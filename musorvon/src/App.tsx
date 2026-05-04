@@ -31,6 +31,9 @@ const ProfilePage = lazy(() =>
 const AdminPage = lazy(() =>
   import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })),
 )
+const LegalPage = lazy(() =>
+  import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })),
+)
 
 function LoadingScreen() {
   return (
@@ -116,6 +119,8 @@ function AppRoutes() {
         />
         {/* Admin panel — PIN protected, no Supabase auth required */}
         <Route path="/admin" element={<AdminPage />} />
+        {/* Public legal page — no auth required */}
+        <Route path="/legal" element={<LegalPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -135,6 +135,12 @@ export function PaymentPage() {
           <p className="text-center text-xs text-[#7F8A80]">
             Безопасная оплата через ЮКассу
           </p>
+          <p className="text-center text-xs text-[#7F8A80]">
+            Нажимая «Оплатить», вы соглашаетесь с{' '}
+            <a href="/legal" target="_blank" className="underline text-[#33A65A]">
+              публичной офертой
+            </a>
+          </p>
         </div>
       </div>
     </div>

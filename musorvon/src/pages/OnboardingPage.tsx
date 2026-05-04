@@ -79,6 +79,9 @@ export function OnboardingPage() {
         <p className="text-center text-xs text-[#7F8A80]">
           Нажимая «Начать», вы соглашаетесь с условиями сервиса
         </p>
+        <a href="/legal" className="text-center text-xs text-[#7F8A80] underline">
+          Публичная оферта
+        </a>
       </div>
     </div>
   )

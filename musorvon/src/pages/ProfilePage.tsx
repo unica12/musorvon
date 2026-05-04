@@ -186,6 +186,9 @@ export function ProfilePage() {
         <Button variant="danger" fullWidth onClick={handleSignOut}>
           Выйти из аккаунта
         </Button>
+        <a href="/legal" className="text-xs text-[#7F8A80] underline text-center pb-2">
+          Публичная оферта и реквизиты
+        </a>
       </div>
 
       <BottomNav />
