@@ -22,6 +22,9 @@ const PaymentPage = lazy(() =>
 const SuccessPage = lazy(() =>
   import('./pages/SuccessPage').then((m) => ({ default: m.SuccessPage })),
 )
+const PaymentSuccessPage = lazy(() =>
+  import('./pages/PaymentSuccessPage').then((m) => ({ default: m.PaymentSuccessPage })),
+)
 const HistoryPage = lazy(() =>
   import('./pages/HistoryPage').then((m) => ({ default: m.HistoryPage })),
 )
@@ -94,11 +97,13 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/payment/:orderId"
+          path="/payment"
           element={
             isLoading ? <LoadingScreen /> : user ? <PaymentPage /> : <Navigate to="/" replace />
           }
         />
+        {/* Public: YooKassa redirects here after payment */}
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
         <Route
           path="/success"
           element={

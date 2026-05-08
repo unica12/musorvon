@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { StatusBar } from '../components/layout/StatusBar'
-import { createPayment } from '../lib/yookassa'
 import { supabase } from '../lib/supabase'
+import { useAppStore } from '../store/useAppStore'
 
 const INCLUDED = [
   'Забор пакетов от вашей двери',
@@ -15,41 +15,23 @@ const INCLUDED = [
 ]
 
 export function PaymentPage() {
-  const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
+  const { apartment } = useAppStore()
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    // Pre-load order details (non-critical)
-    if (!orderId) return
-    void supabase.from('orders').select('*').eq('id', orderId).single()
-  }, [orderId])
-
   async function handlePay() {
-    if (!orderId) return
+    if (!apartment) return
     setLoading(true)
     try {
-      // TODO: replace with real ЮКасса integration
-      const { payment_id } = await createPayment(orderId)
-
-      // Mark order as paid in Supabase
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          payment_id,
-          status: 'paid',
-          payment_status: 'succeeded',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', orderId)
-
-      if (error) throw error
-
-      navigate(`/success?order_id=${orderId}`, { replace: true })
+      const response = await supabase.functions.invoke('create-payment', {
+        body: { apartmentId: apartment.id },
+      })
+      if (response.error) throw response.error
+      const { confirmationUrl } = response.data as { orderId: string; confirmationUrl: string }
+      window.location.href = confirmationUrl
     } catch (err) {
-      console.error(err)
+      console.error('[PaymentPage] handlePay error:', err)
       toast.error('Ошибка создания платежа. Попробуйте снова.')
-    } finally {
       setLoading(false)
     }
   }
@@ -80,9 +62,7 @@ export function PaymentPage() {
 
         {/* What's included */}
         <Card>
-          <p className="text-sm font-semibold text-[#1A1F1A] mb-3">
-            Что входит:
-          </p>
+          <p className="text-sm font-semibold text-[#1A1F1A] mb-3">Что входит:</p>
           <div className="flex flex-col gap-2.5">
             {INCLUDED.map((item) => (
               <div key={item} className="flex items-start gap-2.5">
@@ -111,9 +91,7 @@ export function PaymentPage() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">⏱️</span>
             <div>
-              <p className="text-sm font-semibold text-[#1A6B38]">
-                Время ожидания
-              </p>
+              <p className="text-sm font-semibold text-[#1A6B38]">Время ожидания</p>
               <p className="text-sm text-[#1A6B38]">15–30 минут после оплаты</p>
             </div>
           </div>

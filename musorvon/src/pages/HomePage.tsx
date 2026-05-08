@@ -1,28 +1,15 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { BottomNav } from '../components/layout/BottomNav'
 import { useAppStore } from '../store/useAppStore'
-import { useOrders } from '../hooks/useOrders'
 
 export function HomePage() {
   const navigate = useNavigate()
   const { apartment } = useAppStore()
-  const { createOrder } = useOrders()
-  const [loading, setLoading] = useState(false)
 
-  async function handleCallPickup() {
-    setLoading(true)
-    try {
-      const order = await createOrder()
-      navigate(`/payment/${order.id}`)
-    } catch {
-      toast.error('Не удалось создать заказ. Попробуйте снова.')
-    } finally {
-      setLoading(false)
-    }
+  function handleCallPickup() {
+    navigate('/payment')
   }
 
   return (
@@ -110,7 +97,6 @@ export function HomePage() {
             <Button
               size="lg"
               fullWidth
-              loading={loading}
               onClick={handleCallPickup}
             >
               Вызвать уборку

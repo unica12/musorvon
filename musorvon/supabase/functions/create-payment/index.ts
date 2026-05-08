@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const YOOKASSA_SHOP_ID = Deno.env.get('YOOKASSA_SHOP_ID')!
 const YOOKASSA_SECRET_KEY = Deno.env.get('YOOKASSA_SECRET_KEY')!
-const YOOKASSA_RETURN_URL = Deno.env.get('YOOKASSA_RETURN_URL')!
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://musor-von.ru'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -38,42 +38,58 @@ serve(async (req: Request) => {
       })
     }
 
-    const { order_id } = await req.json() as { order_id: string }
+    const { apartmentId } = await req.json() as { apartmentId: string }
 
-    // Verify order belongs to user
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', order_id)
+    // Verify apartment belongs to user
+    const { data: apartment, error: aptError } = await supabase
+      .from('apartments')
+      .select('id')
+      .eq('id', apartmentId)
       .eq('user_id', user.id)
       .single()
 
-    if (orderError || !order) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
+    if (aptError || !apartment) {
+      return new Response(JSON.stringify({ error: 'Apartment not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Create YooKassa payment
-    const idempotenceKey = crypto.randomUUID()
-    const credentials = btoa(`${YOOKASSA_SHOP_ID}:${YOOKASSA_SECRET_KEY}`)
+    // Create order
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user.id,
+        apartment_id: apartmentId,
+        status: 'pending',
+        amount: 10000,
+        payment_status: 'pending',
+        payment_id: null,
+      })
+      .select()
+      .single()
 
+    if (orderError || !order) {
+      throw new Error('Failed to create order')
+    }
+
+    // Create YooKassa payment
+    const credentials = btoa(`${YOOKASSA_SHOP_ID}:${YOOKASSA_SECRET_KEY}`)
     const paymentResponse = await fetch('https://api.yookassa.ru/v3/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${credentials}`,
         'Content-Type': 'application/json',
-        'Idempotence-Key': idempotenceKey,
+        'Idempotence-Key': crypto.randomUUID(),
       },
       body: JSON.stringify({
-        amount: { value: (order.amount / 100).toFixed(2), currency: 'RUB' },
+        amount: { value: '100.00', currency: 'RUB' },
         confirmation: {
           type: 'redirect',
-          return_url: `${YOOKASSA_RETURN_URL}/success?order_id=${order_id}`,
+          return_url: `${APP_URL}/payment/success?orderId=${order.id}`,
         },
-        description: `МусорВон — вынос мусора, заказ #${order_id.slice(0, 8).toUpperCase()}`,
-        metadata: { order_id },
+        description: `МусорВон — вынос мусора, заказ #${order.id.slice(0, 8).toUpperCase()}`,
+        metadata: { order_id: order.id },
         capture: true,
       }),
     })
@@ -81,6 +97,8 @@ serve(async (req: Request) => {
     if (!paymentResponse.ok) {
       const errData = await paymentResponse.json()
       console.error('YooKassa error:', errData)
+      // Clean up order on YooKassa failure
+      await supabase.from('orders').delete().eq('id', order.id)
       throw new Error('Ошибка создания платежа в ЮКассе')
     }
 
@@ -89,16 +107,16 @@ serve(async (req: Request) => {
       confirmation: { confirmation_url: string }
     }
 
-    // Update order with payment_id
+    // Save payment_id to order
     await supabase
       .from('orders')
-      .update({ payment_id: payment.id, payment_status: 'pending' })
-      .eq('id', order_id)
+      .update({ payment_id: payment.id })
+      .eq('id', order.id)
 
     return new Response(
       JSON.stringify({
-        payment_id: payment.id,
-        confirmation_url: payment.confirmation.confirmation_url,
+        orderId: order.id,
+        confirmationUrl: payment.confirmation.confirmation_url,
       }),
       {
         status: 200,
