@@ -1,15 +1,16 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const YOOKASSA_SHOP_ID = Deno.env.get('YOOKASSA_SHOP_ID')!
-const YOOKASSA_SECRET_KEY = Deno.env.get('YOOKASSA_SECRET_KEY')!
-const APP_URL = Deno.env.get('APP_URL') ?? 'https://musor-von.ru'
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
 }
 
 serve(async (req: Request) => {
@@ -17,28 +18,40 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  // Validate required secrets are configured
+  const YOOKASSA_SHOP_ID = Deno.env.get('YOOKASSA_SHOP_ID')
+  const YOOKASSA_SECRET_KEY = Deno.env.get('YOOKASSA_SECRET_KEY')
+  const APP_URL = Deno.env.get('APP_URL') ?? 'https://musor-von.ru'
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+  if (!YOOKASSA_SHOP_ID || !YOOKASSA_SECRET_KEY) {
+    console.error('Missing YooKassa secrets: YOOKASSA_SHOP_ID or YOOKASSA_SECRET_KEY not set')
+    return jsonResponse({ error: 'Payment service not configured' }, 500)
+  }
+
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return jsonResponse({ error: 'Unauthorized' }, 401)
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    const { data: { user } } = await supabase.auth.getUser(
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', ''),
     )
 
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (authError || !user) {
+      console.error('Auth error:', authError)
+      return jsonResponse({ error: 'Unauthorized' }, 401)
     }
 
-    const { apartmentId } = await req.json() as { apartmentId: string }
+    const body = await req.json() as { apartmentId?: string }
+    const { apartmentId } = body
+
+    if (!apartmentId) {
+      return jsonResponse({ error: 'apartmentId is required' }, 400)
+    }
 
     // Verify apartment belongs to user
     const { data: apartment, error: aptError } = await supabase
@@ -49,10 +62,8 @@ serve(async (req: Request) => {
       .single()
 
     if (aptError || !apartment) {
-      return new Response(JSON.stringify({ error: 'Apartment not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      console.error('Apartment error:', aptError)
+      return jsonResponse({ error: 'Apartment not found' }, 404)
     }
 
     // Create order
@@ -70,7 +81,8 @@ serve(async (req: Request) => {
       .single()
 
     if (orderError || !order) {
-      throw new Error('Failed to create order')
+      console.error('Order insert error:', orderError)
+      return jsonResponse({ error: 'Failed to create order' }, 500)
     }
 
     // Create YooKassa payment
@@ -95,11 +107,10 @@ serve(async (req: Request) => {
     })
 
     if (!paymentResponse.ok) {
-      const errData = await paymentResponse.json()
-      console.error('YooKassa error:', errData)
-      // Clean up order on YooKassa failure
+      const errData = await paymentResponse.text()
+      console.error('YooKassa error:', paymentResponse.status, errData)
       await supabase.from('orders').delete().eq('id', order.id)
-      throw new Error('Ошибка создания платежа в ЮКассе')
+      return jsonResponse({ error: 'YooKassa payment creation failed', detail: errData }, 502)
     }
 
     const payment = await paymentResponse.json() as {
@@ -107,30 +118,17 @@ serve(async (req: Request) => {
       confirmation: { confirmation_url: string }
     }
 
-    // Save payment_id to order
     await supabase
       .from('orders')
       .update({ payment_id: payment.id })
       .eq('id', order.id)
 
-    return new Response(
-      JSON.stringify({
-        orderId: order.id,
-        confirmationUrl: payment.confirmation.confirmation_url,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    )
+    return jsonResponse({
+      orderId: order.id,
+      confirmationUrl: payment.confirmation.confirmation_url,
+    })
   } catch (err) {
-    console.error(err)
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    )
+    console.error('Unexpected error:', err)
+    return jsonResponse({ error: 'Internal server error' }, 500)
   }
 })

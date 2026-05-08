@@ -133,28 +133,11 @@ function AppRoutes() {
 }
 
 export default function App() {
-  // A2HS prompt
+  // Suppress default browser A2HS mini-infobar; prompt is shown elsewhere on user gesture
   useEffect(() => {
-    let deferredPrompt: BeforeInstallPromptEvent | null = null
-
-    const handler = (e: Event) => {
-      e.preventDefault()
-      deferredPrompt = e as BeforeInstallPromptEvent
-    }
-
+    const handler = (e: Event) => e.preventDefault()
     window.addEventListener('beforeinstallprompt', handler)
-
-    // Auto-show prompt after 10 seconds if not installed
-    const timer = setTimeout(() => {
-      if (deferredPrompt) {
-        void deferredPrompt.prompt()
-      }
-    }, 10000)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler)
-      clearTimeout(timer)
-    }
+    return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
   return (
@@ -179,7 +162,3 @@ export default function App() {
   )
 }
 
-// BeforeInstallPromptEvent type
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>
-}
