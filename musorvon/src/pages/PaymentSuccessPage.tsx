@@ -186,10 +186,13 @@ export function PaymentSuccessPage() {
       <div className="text-center">
         <p className="text-base font-semibold text-[#1A1F1A]">Проверяем оплату...</p>
         <p className="text-sm text-[#7F8A80] mt-1">Это займёт несколько секунд</p>
+        <button
+          onClick={() => navigate('/home')}
+          className="mt-6 text-sm text-gray-500 underline"
+        >
+          Вернуться на главную
+        </button>
       </div>
-      <Button variant="secondary" onClick={() => navigate('/home')}>
-        Отменить
-      </Button>
     </div>
   )
 }
