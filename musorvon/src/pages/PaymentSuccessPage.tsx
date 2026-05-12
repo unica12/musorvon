@@ -176,23 +176,27 @@ export function PaymentSuccessPage() {
 
   // ── Polling ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col items-center justify-center min-h-dvh bg-[#F7FAF6] px-6 gap-6">
+    <div className="flex flex-col items-center justify-center min-h-dvh bg-[#F7FAF6] px-6">
       <div className="w-16 h-16 rounded-2xl bg-[#33A65A] flex items-center justify-center animate-pulse">
         <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
           <path d="M16 20h32l-4 28H20L16 20z" fill="white" fillOpacity="0.9" />
           <path d="M12 20h40M24 20v-4a4 4 0 018 0v4" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <div className="text-center">
-        <p className="text-base font-semibold text-[#1A1F1A]">Проверяем оплату...</p>
-        <p className="text-sm text-[#7F8A80] mt-1">Это займёт несколько секунд</p>
-        <button
-          onClick={() => navigate('/home')}
-          className="mt-6 text-sm text-gray-500 underline"
-        >
-          Вернуться на главную
-        </button>
-      </div>
+      <p className="mt-4 text-base font-semibold text-[#1A1F1A]">Проверяем оплату...</p>
+      <p className="mt-1 text-sm text-[#7F8A80]">Это займёт несколько секунд</p>
+      <button
+        onClick={() => navigate('/home')}
+        className="mt-8 w-full py-4 bg-[#33A65A] text-white rounded-2xl font-bold text-lg"
+      >
+        На главную
+      </button>
+      <button
+        onClick={() => navigate('/payment')}
+        className="mt-3 text-sm text-gray-400 underline"
+      >
+        Попробовать снова
+      </button>
     </div>
   )
 }
