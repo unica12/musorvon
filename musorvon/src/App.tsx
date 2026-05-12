@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useAuth } from './hooks/useAuth'
 import { useAppStore } from './store/useAppStore'
+import { CookieBanner } from './components/CookieBanner'
 
 const OnboardingPage = lazy(() =>
   import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
@@ -36,6 +37,9 @@ const AdminPage = lazy(() =>
 )
 const LegalPage = lazy(() =>
   import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })),
+)
+const PrivacyPage = lazy(() =>
+  import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })),
 )
 
 function LoadingScreen() {
@@ -124,8 +128,9 @@ function AppRoutes() {
         />
         {/* Admin panel — PIN protected, no Supabase auth required */}
         <Route path="/admin" element={<AdminPage />} />
-        {/* Public legal page — no auth required */}
+        {/* Public legal pages — no auth required */}
         <Route path="/legal" element={<LegalPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
@@ -143,6 +148,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
+      <CookieBanner />
       <Toaster
         position="top-center"
         toastOptions={{

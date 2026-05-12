@@ -17,6 +17,7 @@ export const PENDING_ADDRESS_KEY = 'musorvon_pending_address'
 
 export function RegisterAddressPage() {
   const navigate = useNavigate()
+  const [consentGiven, setConsentGiven] = useState(false)
   const [form, setForm] = useState<PendingAddress>({
     building: '',
     entrance: '',
@@ -87,9 +88,37 @@ export function RegisterAddressPage() {
             value={form.apartment_number}
             onChange={(e) => updateForm('apartment_number', e.target.value)}
           />
-          <Button fullWidth size="lg" onClick={handleNext}>
+          <Button
+            fullWidth
+            size="lg"
+            onClick={handleNext}
+            disabled={!consentGiven}
+            className={!consentGiven ? 'opacity-50 cursor-not-allowed' : ''}
+          >
             Продолжить
           </Button>
+
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="consent"
+              checked={consentGiven}
+              onChange={(e) => setConsentGiven(e.target.checked)}
+              className="mt-1 w-5 h-5 accent-green-600 flex-shrink-0"
+            />
+            <label htmlFor="consent" className="text-sm text-gray-500">
+              Я соглашаюсь с{' '}
+              <a href="/privacy" target="_blank" className="text-green-600 underline">
+                Политикой конфиденциальности
+              </a>
+              {' '}и{' '}
+              <a href="/legal" target="_blank" className="text-green-600 underline">
+                Публичной офертой
+              </a>
+              , и даю согласие на обработку персональных данных
+            </label>
+          </div>
+
           <button
             className="w-full text-center text-sm text-[#7F8A80] py-1 hover:text-[#33A65A] transition-colors"
             onClick={() => navigate('/register/email')}
