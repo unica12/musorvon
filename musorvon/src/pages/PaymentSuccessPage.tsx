@@ -4,10 +4,10 @@ import { supabase } from '../lib/supabase'
 import { Button } from '../components/ui/Button'
 import type { Order } from '../types'
 
-type Status = 'polling' | 'succeeded' | 'cancelled' | 'timeout' | 'user_cancelled'
+type Status = 'polling' | 'succeeded' | 'cancelled' | 'timeout'
 
 const MAX_POLLS = 3
-const POLL_INTERVAL_MS = 3000
+const POLL_INTERVAL = 3000
 
 function XIcon() {
   return (
@@ -24,62 +24,61 @@ export function PaymentSuccessPage() {
   const orderId = searchParams.get('orderId')
   const [status, setStatus] = useState<Status>('polling')
   const [order, setOrder] = useState<Order | null>(null)
-  const stopped = useRef(false)
+  const pollCount = useRef(0)
+  const timeoutId = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!orderId) {
-      setStatus('timeout')
+      navigate('/home')
       return
     }
 
-    stopped.current = false
-    const id = orderId
-    let attempts = 0
-    let timeoutId: ReturnType<typeof setTimeout>
+    pollCount.current = 0
 
-    async function poll() {
-      if (stopped.current) return
+    const checkPayment = async () => {
+      try {
+        const { data } = await supabase
+          .from('orders')
+          .select('payment_status, status, id, amount, created_at')
+          .eq('id', orderId)
+          .maybeSingle()
 
-      const { data } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('id', id)
-        .single()
+        if (!data) {
+          setStatus('timeout')
+          return
+        }
 
-      if (stopped.current) return
+        if (data.payment_status === 'succeeded') {
+          setOrder(data as Order)
+          setStatus('succeeded')
+          setTimeout(() => navigate('/home'), 3000)
+          return
+        }
 
-      if (data?.payment_status === 'succeeded') {
-        setOrder(data as Order)
-        setStatus('succeeded')
-        setTimeout(() => navigate('/home', { replace: true }), 3000)
-        return
-      }
+        if (data.payment_status === 'cancelled' || data.status === 'cancelled') {
+          setStatus('cancelled')
+          return
+        }
 
-      if (data?.payment_status === 'cancelled' || data?.status === 'cancelled') {
-        setStatus('cancelled')
-        return
-      }
+        // Still pending
+        pollCount.current++
+        if (pollCount.current >= MAX_POLLS) {
+          setStatus('timeout')
+          return
+        }
 
-      // Still pending
-      attempts++
-      if (attempts < MAX_POLLS) {
-        timeoutId = setTimeout(() => void poll(), POLL_INTERVAL_MS)
-      } else {
+        timeoutId.current = setTimeout(checkPayment, POLL_INTERVAL)
+      } catch {
         setStatus('timeout')
       }
     }
 
-    void poll()
+    void checkPayment()
+
     return () => {
-      stopped.current = true
-      clearTimeout(timeoutId)
+      if (timeoutId.current) clearTimeout(timeoutId.current)
     }
   }, [orderId, navigate])
-
-  function handleUserCancel() {
-    stopped.current = true
-    setStatus('user_cancelled')
-  }
 
   // ── Success ──────────────────────────────────────────────────────────────
   if (status === 'succeeded') {
@@ -92,7 +91,7 @@ export function PaymentSuccessPage() {
             </svg>
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-[#1A1F1A]">Оплата прошла!</h1>
+            <h1 className="text-2xl font-bold text-[#1A1F1A]">Заявка принята!</h1>
             <p className="text-sm text-[#7F8A80] mt-2">Курьер заберёт мусор за 15–30 минут.</p>
             <p className="text-sm text-[#7F8A80]">Оставьте пакет за дверью квартиры.</p>
             <p className="text-xs text-[#7F8A80] mt-3">Переход на главную через 3 секунды…</p>
@@ -114,14 +113,14 @@ export function PaymentSuccessPage() {
             </div>
           )}
         </div>
-        <Button fullWidth size="lg" onClick={() => navigate('/home', { replace: true })}>
+        <Button fullWidth size="lg" onClick={() => navigate('/home')}>
           На главную
         </Button>
       </div>
     )
   }
 
-  // ── Cancelled by YooKassa (webhook confirmed) ────────────────────────────
+  // ── Cancelled by webhook ─────────────────────────────────────────────────
   if (status === 'cancelled') {
     return (
       <div className="flex flex-col items-center justify-center min-h-dvh bg-[#F7FAF6] px-6 gap-8">
@@ -138,7 +137,7 @@ export function PaymentSuccessPage() {
           <Button fullWidth size="lg" onClick={() => navigate('/payment')}>
             Попробовать снова
           </Button>
-          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/home', { replace: true })}>
+          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/home')}>
             На главную
           </Button>
         </div>
@@ -146,7 +145,7 @@ export function PaymentSuccessPage() {
     )
   }
 
-  // ── Timed out: 3 polls, still pending ───────────────────────────────────
+  // ── Timeout: 3 polls done, still pending ─────────────────────────────────
   if (status === 'timeout') {
     return (
       <div className="flex flex-col items-center justify-center min-h-dvh bg-[#F7FAF6] px-6 gap-8">
@@ -167,30 +166,10 @@ export function PaymentSuccessPage() {
           <Button fullWidth size="lg" onClick={() => navigate('/payment')}>
             Попробовать снова
           </Button>
-          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/home', { replace: true })}>
+          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/home')}>
             На главную
           </Button>
         </div>
-      </div>
-    )
-  }
-
-  // ── User clicked "Отменить" ──────────────────────────────────────────────
-  if (status === 'user_cancelled') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-dvh bg-[#F7FAF6] px-6 gap-8">
-        <div className="flex flex-col items-center gap-5">
-          <div className="w-24 h-24 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444]">
-            <XIcon />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-[#1A1F1A]">Заказ отменён</h1>
-            <p className="text-sm text-[#7F8A80] mt-2">Средства не списаны.</p>
-          </div>
-        </div>
-        <Button fullWidth size="lg" onClick={() => navigate('/home', { replace: true })}>
-          На главную
-        </Button>
       </div>
     )
   }
@@ -208,7 +187,7 @@ export function PaymentSuccessPage() {
         <p className="text-base font-semibold text-[#1A1F1A]">Проверяем оплату...</p>
         <p className="text-sm text-[#7F8A80] mt-1">Это займёт несколько секунд</p>
       </div>
-      <Button variant="secondary" onClick={handleUserCancel}>
+      <Button variant="secondary" onClick={() => navigate('/home')}>
         Отменить
       </Button>
     </div>
