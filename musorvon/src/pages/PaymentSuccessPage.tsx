@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Button } from '../components/ui/Button'
-import type { Order } from '../types'
 
 type Status = 'polling' | 'succeeded' | 'cancelled' | 'timeout'
 
@@ -23,7 +22,6 @@ export function PaymentSuccessPage() {
   const navigate = useNavigate()
   const orderId = searchParams.get('orderId')
   const [status, setStatus] = useState<Status>('polling')
-  const [order, setOrder] = useState<Order | null>(null)
   const pollCount = useRef(0)
   const timeoutId = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -37,30 +35,24 @@ export function PaymentSuccessPage() {
 
     const checkPayment = async () => {
       try {
-        const { data } = await supabase
-          .from('orders')
-          .select('payment_status, status, id, amount, created_at')
-          .eq('id', orderId)
-          .maybeSingle()
+        const response = await supabase.functions.invoke('check-payment', {
+          body: { orderId },
+        })
 
-        if (!data) {
-          setStatus('timeout')
-          return
-        }
+        const data = response.data as { status?: string } | null
 
-        if (data.payment_status === 'succeeded') {
-          setOrder(data as Order)
+        if (data?.status === 'succeeded') {
           setStatus('succeeded')
           setTimeout(() => navigate('/home'), 3000)
           return
         }
 
-        if (data.payment_status === 'cancelled' || data.status === 'cancelled') {
+        if (data?.status === 'canceled') {
           setStatus('cancelled')
           return
         }
 
-        // Still pending
+        // pending or unknown — keep polling
         pollCount.current++
         if (pollCount.current >= MAX_POLLS) {
           setStatus('timeout')
@@ -96,22 +88,6 @@ export function PaymentSuccessPage() {
             <p className="text-sm text-[#7F8A80]">Оставьте пакет за дверью квартиры.</p>
             <p className="text-xs text-[#7F8A80] mt-3">Переход на главную через 3 секунды…</p>
           </div>
-          {order && (
-            <div className="w-full bg-white rounded-2xl border border-[#E0EBE1] px-5 py-4 flex flex-col gap-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-[#7F8A80]">Заказ</span>
-                <span className="font-medium text-[#1A1F1A]">#{order.id.slice(0, 8).toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#7F8A80]">Сумма</span>
-                <span className="font-medium text-[#1A1F1A]">100 ₽</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#7F8A80]">Статус</span>
-                <span className="font-semibold text-[#33A65A]">Оплачен</span>
-              </div>
-            </div>
-          )}
         </div>
         <Button fullWidth size="lg" onClick={() => navigate('/home')}>
           На главную
@@ -120,7 +96,7 @@ export function PaymentSuccessPage() {
     )
   }
 
-  // ── Cancelled by webhook ─────────────────────────────────────────────────
+  // ── Cancelled ────────────────────────────────────────────────────────────
   if (status === 'cancelled') {
     return (
       <div className="flex flex-col items-center justify-center min-h-dvh bg-[#F7FAF6] px-6 gap-8">
@@ -134,18 +110,18 @@ export function PaymentSuccessPage() {
           </div>
         </div>
         <div className="w-full flex flex-col gap-3">
-          <Button fullWidth size="lg" onClick={() => navigate('/payment')}>
-            Попробовать снова
-          </Button>
-          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/home')}>
+          <Button fullWidth size="lg" onClick={() => navigate('/home')}>
             На главную
+          </Button>
+          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/payment')}>
+            Попробовать снова
           </Button>
         </div>
       </div>
     )
   }
 
-  // ── Timeout: 3 polls done, still pending ─────────────────────────────────
+  // ── Timeout ──────────────────────────────────────────────────────────────
   if (status === 'timeout') {
     return (
       <div className="flex flex-col items-center justify-center min-h-dvh bg-[#F7FAF6] px-6 gap-8">
@@ -158,16 +134,16 @@ export function PaymentSuccessPage() {
             </svg>
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-[#1A1F1A]">Похоже, оплата не была завершена</h1>
+            <h1 className="text-2xl font-bold text-[#1A1F1A]">Оплата не завершена</h1>
             <p className="text-sm text-[#7F8A80] mt-2">Если деньги списались — обратитесь в поддержку.</p>
           </div>
         </div>
         <div className="w-full flex flex-col gap-3">
-          <Button fullWidth size="lg" onClick={() => navigate('/payment')}>
-            Попробовать снова
-          </Button>
-          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/home')}>
+          <Button fullWidth size="lg" onClick={() => navigate('/home')}>
             На главную
+          </Button>
+          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/payment')}>
+            Попробовать снова
           </Button>
         </div>
       </div>
