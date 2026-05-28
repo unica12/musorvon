@@ -34,6 +34,9 @@ serve(async (req) => {
 
     if (!order) return json({ error: 'Order not found' }, 404)
 
+    // Already succeeded without YooKassa (package balance use)
+    if (order.payment_status === 'succeeded') return json({ status: 'succeeded', orderId })
+
     // No payment_id yet — still creating
     if (!order.payment_id) return json({ status: 'pending' })
 

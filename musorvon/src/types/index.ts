@@ -17,6 +17,8 @@ export interface Apartment {
   user_id: string
   email?: string | null
   created_at: string
+  promo_orders_used?: number
+  promo_started_at?: string | null
 }
 
 export interface Order {
@@ -27,9 +29,20 @@ export interface Order {
   amount: number
   payment_id: string | null
   payment_status: PaymentStatus
+  is_promo: boolean
+  package_id: string | null
   created_at: string
   updated_at: string
   apartments?: Apartment
+}
+
+export interface Package {
+  id: string
+  apartment_id: string
+  total_orders: number
+  used_orders: number
+  amount_paid: number
+  created_at: string
 }
 
 export interface PushSubscriptionRecord {

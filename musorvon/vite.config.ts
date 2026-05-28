@@ -77,20 +77,8 @@ export default defineConfig({
         clientsClaim: true,
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [],
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24,
-              },
-            },
-          },
-        ],
+        globPatterns: ['**/*.{js,html,css,ico,png,svg,woff2}'],
+        runtimeCaching: [],
       },
       devOptions: { enabled: false },
     }),

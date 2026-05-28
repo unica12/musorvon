@@ -5,6 +5,8 @@ import { Button } from '../components/ui/Button'
 
 type Status = 'polling' | 'succeeded' | 'cancelled' | 'timeout'
 
+let _pollStarted = false
+
 const MAX_POLLS = 3
 const POLL_INTERVAL = 3000
 
@@ -26,18 +28,29 @@ export function PaymentSuccessPage() {
   const timeoutId = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    return () => { _pollStarted = false }
+  }, [])
+
+  useEffect(() => {
     if (!orderId) {
       navigate('/home')
       return
     }
 
+    console.log('[Payment] useEffect fired, _pollStarted:', _pollStarted, 'orderId:', orderId)
+
+    if (_pollStarted) return
+    _pollStarted = true
+
     pollCount.current = 0
 
     const checkPayment = async () => {
       try {
+        console.log('[Payment] Calling check-payment, orderId:', orderId, 'pollCount:', pollCount.current)
         const response = await supabase.functions.invoke('check-payment', {
           body: { orderId },
         })
+        console.log('[Payment] check-payment response:', response.data, response.error)
 
         const data = response.data as { status?: string } | null
 

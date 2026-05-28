@@ -31,7 +31,7 @@ function OrdersSkeleton() {
 
 export function HistoryPage() {
   const { orders } = useAppStore()
-  const { fetchOrders, subscribeToOrder } = useOrders()
+  const { fetchOrders, subscribeToUserOrders } = useOrders()
   const [ordersLoading, setOrdersLoading] = useState(true)
 
   useEffect(() => {
@@ -39,14 +39,7 @@ export function HistoryPage() {
     void fetchOrders().finally(() => setOrdersLoading(false))
   }, [fetchOrders])
 
-  // Subscribe to realtime updates for in-progress orders
-  useEffect(() => {
-    const activeOrders = orders.filter(
-      (o) => o.status !== 'completed' && o.status !== 'cancelled',
-    )
-    const unsubs = activeOrders.map((o) => subscribeToOrder(o.id))
-    return () => unsubs.forEach((unsub) => unsub())
-  }, [orders, subscribeToOrder])
+  useEffect(() => subscribeToUserOrders(), [subscribeToUserOrders])
 
   return (
     <div className="flex flex-col min-h-dvh bg-[#F7FAF6] pb-[calc(4rem+env(safe-area-inset-bottom))]">

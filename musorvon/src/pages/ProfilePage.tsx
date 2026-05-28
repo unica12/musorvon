@@ -182,6 +182,25 @@ export function ProfilePage() {
 
         <div className="flex-1" />
 
+        {/* Support */}
+        <a
+          href="https://t.me/staticlovesyou"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-4 bg-white border border-[#E0EBE1] rounded-2xl text-[#1A1F1A] font-medium text-base"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#2AABEE">
+            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.48 14.49 5.52 13.6c-.658-.205-.67-.658.136-.975l10.857-4.187c.548-.198 1.026.12.85.81h-.8z"/>
+          </svg>
+          Написать нам в Telegram
+        </a>
+        <a
+          href="mailto:andreyzemsckoff@yandex.ru"
+          className="text-center text-sm text-[#7F8A80] underline"
+        >
+          andreyzemsckoff@yandex.ru
+        </a>
+
         {/* Sign Out */}
         <Button variant="danger" fullWidth onClick={handleSignOut}>
           Выйти из аккаунта

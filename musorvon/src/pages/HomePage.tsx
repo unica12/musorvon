@@ -3,10 +3,13 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { BottomNav } from '../components/layout/BottomNav'
 import { useAppStore } from '../store/useAppStore'
+const PROMO_LIMIT = 3
 
 export function HomePage() {
   const navigate = useNavigate()
   const { apartment } = useAppStore()
+
+  const promoLeft = Math.max(0, PROMO_LIMIT - (apartment?.promo_orders_used ?? 0))
 
   function handleCallPickup() {
     navigate('/payment')
@@ -89,9 +92,17 @@ export function HomePage() {
             <div className="text-center">
               <p className="text-gray-900 font-bold text-xl">Вызвать уборку</p>
               <p className="text-gray-600 text-sm mt-1">Курьер заберёт мусор за 15–30 минут</p>
-              <div className="inline-flex items-center mt-2 px-3 py-1 rounded-full bg-[#E6F4EA]">
-                <span className="text-sm font-semibold" style={{ color: '#1A6B38' }}>100 ₽ за вынос</span>
-              </div>
+              {promoLeft > 0 ? (
+                <div className="inline-flex items-center mt-2 px-3 py-1 rounded-full bg-[#E6F4EA]">
+                  <span className="text-sm font-semibold" style={{ color: '#1A6B38' }}>
+                    🎉 3 выноса бесплатно — осталось {promoLeft} из 3
+                  </span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center mt-2 px-3 py-1 rounded-full bg-[#E6F4EA]">
+                  <span className="text-sm font-semibold" style={{ color: '#1A6B38' }}>100 ₽ за вынос</span>
+                </div>
+              )}
             </div>
 
             <Button
@@ -101,6 +112,10 @@ export function HomePage() {
             >
               Вызвать уборку
             </Button>
+
+            <p className="text-center text-xs text-[#7F8A80]">
+              Работаем с 9:00 до 19:00
+            </p>
           </div>
         </Card>
 
@@ -131,7 +146,7 @@ export function HomePage() {
             <div className="flex flex-col gap-1.5">
               <span className="text-2xl">📍</span>
               <p className="text-sm font-semibold text-[#1A1F1A]">Трекинг</p>
-              <p className="text-xs text-[#7F8A80]">Статус в реальном времени</p>
+              <p className="text-xs text-[#7F8A80]">Статус</p>
             </div>
           </Card>
         </div>

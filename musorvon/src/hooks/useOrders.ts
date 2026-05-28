@@ -78,5 +78,23 @@ export function useOrders() {
     [updateOrderStatus],
   )
 
-  return { orders, fetchOrders, createOrder, subscribeToOrder }
+  const subscribeToUserOrders = useCallback(() => {
+    if (!userId) return () => {}
+
+    const channel = supabase
+      .channel('orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const updated = payload.new as Order
+          updateOrderStatus(updated.id, updated)
+        },
+      )
+      .subscribe()
+
+    return () => { void supabase.removeChannel(channel) }
+  }, [userId, updateOrderStatus])
+
+  return { orders, fetchOrders, createOrder, subscribeToOrder, subscribeToUserOrders }
 }

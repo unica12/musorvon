@@ -1,6 +1,7 @@
 import { useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import { useAuth } from './hooks/useAuth'
 import { useAppStore } from './store/useAppStore'
 import { CookieBanner } from './components/CookieBanner'
@@ -138,6 +139,9 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW()
+  useEffect(() => { if (needRefresh) void updateServiceWorker(true) }, [needRefresh, updateServiceWorker])
+
   // Suppress default browser A2HS mini-infobar; prompt is shown elsewhere on user gesture
   useEffect(() => {
     const handler = (e: Event) => e.preventDefault()

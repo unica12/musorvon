@@ -40,8 +40,12 @@ serve(async (req: Request) => {
   try {
     const body = await req.text()
 
+    console.log('[webhook] received event body length:', body.length)
+    console.log('[webhook] body preview:', body.slice(0, 200))
+
     // Verify the webhook is from YooKassa
     const isValid = await verifyYooKassaSignature(body, YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY)
+    console.log('[webhook] isValid:', isValid)
     if (!isValid) {
       return new Response(JSON.stringify({ error: 'Invalid signature' }), {
         status: 401,
@@ -71,7 +75,6 @@ serve(async (req: Request) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     if (eventType === 'payment.succeeded') {
-      // Update order
       const { data: order } = await supabase
         .from('orders')
         .update({
@@ -80,10 +83,39 @@ serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         })
         .eq('id', orderId)
-        .select('user_id')
+        .select('user_id, is_promo, package_id, apartment_id, amount')
         .single()
 
-      // Send push notification
+      if (order?.is_promo) {
+        const { data: apt } = await supabase
+          .from('apartments')
+          .select('promo_orders_used, promo_started_at')
+          .eq('id', order.apartment_id)
+          .single()
+        await supabase.from('apartments').update({
+          promo_orders_used: (apt?.promo_orders_used ?? 0) + 1,
+          promo_started_at: apt?.promo_started_at ?? new Date().toISOString(),
+        }).eq('id', order.apartment_id)
+      } else if (order?.package_id) {
+        const { data: pkg } = await supabase
+          .from('packages')
+          .select('used_orders')
+          .eq('id', order.package_id)
+          .single()
+        await supabase.from('packages').update({
+          used_orders: (pkg?.used_orders ?? 0) + 1,
+        }).eq('id', order.package_id)
+      } else if (order) {
+        const PACKAGE_ORDERS: Record<number, number> = { 100: 1, 400: 5, 700: 10 }
+        const totalOrders = PACKAGE_ORDERS[order.amount] ?? 1
+        await supabase.from('packages').insert({
+          apartment_id: order.apartment_id,
+          total_orders: totalOrders,
+          used_orders: 1,
+          amount_paid: order.amount,
+        })
+      }
+
       if (order?.user_id) {
         await sendPushNotification(
           supabase,

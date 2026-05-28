@@ -9,7 +9,7 @@ export function useAuth() {
   const { user } = useAppStore()
 
   useEffect(() => {
-    const { setUser, setApartment, setLoading } = useAppStore.getState()
+    const { setUser, setApartment, setLoading, reset } = useAppStore.getState()
 
     setLoading(true)
 
@@ -51,7 +51,7 @@ export function useAuth() {
       if (session?.user) {
         void loadApartment(session.user.id, setApartment)
       } else {
-        setApartment(null)
+        reset()
       }
     })
 

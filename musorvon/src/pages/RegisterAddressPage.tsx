@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { StatusBar } from '../components/layout/StatusBar'
@@ -18,6 +17,7 @@ export const PENDING_ADDRESS_KEY = 'musorvon_pending_address'
 export function RegisterAddressPage() {
   const navigate = useNavigate()
   const [consentGiven, setConsentGiven] = useState(false)
+  const [consentError, setConsentError] = useState(false)
   const [form, setForm] = useState<PendingAddress>({
     building: '',
     entrance: '',
@@ -25,23 +25,39 @@ export function RegisterAddressPage() {
     apartment_number: '',
     name: '',
   })
+  const [errors, setErrors] = useState<Partial<Record<keyof PendingAddress, string>>>({})
 
   function updateForm(field: keyof PendingAddress, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
+    setErrors((prev) => ({ ...prev, [field]: undefined }))
   }
 
-  function isValidField(val: string) { return /^[a-zA-Zа-яА-ЯёЁ0-9\s]{1,10}$/.test(val.trim()) }
-  function isValidFloor(val: string) { const n = parseInt(val); return !isNaN(n) && n >= 1 && n <= 100 }
-  function isValidApartment(val: string) { return /^[0-9]{1,6}[а-яА-ЯёЁ]?$/.test(val.trim()) }
-  function isValidName(val: string) { return val.trim().length >= 1 && val.trim().length <= 50 }
+  function validate(): boolean {
+    const newErrors: Partial<Record<keyof PendingAddress, string>> = {}
+
+    if (!form.name.trim()) newErrors.name = 'Введите ваше имя'
+
+    const building = parseInt(form.building)
+    if (isNaN(building) || building < 1 || building > 4)
+      newErrors.building = 'Выберите корпус от 1 до 4'
+
+    const entrance = parseInt(form.entrance)
+    if (isNaN(entrance) || entrance < 1 || entrance > 10)
+      newErrors.entrance = 'Подъезд от 1 до 10'
+
+    const floor = parseInt(form.floor)
+    if (isNaN(floor) || floor < 1 || floor > 28)
+      newErrors.floor = 'Этаж от 1 до 28'
+
+    if (!form.apartment_number.trim())
+      newErrors.apartment_number = 'Введите номер квартиры'
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   function handleNext() {
-    const { building, entrance, floor, apartment_number, name } = form
-    if (!isValidName(name)) { toast.error('Введите ваше имя'); return }
-    if (!isValidField(building)) { toast.error('Корпус: только буквы и цифры, до 10 символов'); return }
-    if (!isValidField(entrance)) { toast.error('Подъезд: только цифры, до 10 символов'); return }
-    if (!isValidFloor(floor)) { toast.error('Этаж: число от 1 до 100'); return }
-    if (!isValidApartment(apartment_number)) { toast.error('Квартира: от 1 до 6 цифр'); return }
+    if (!validate()) return
     localStorage.setItem(PENDING_ADDRESS_KEY, JSON.stringify(form))
     navigate('/register/email')
   }
@@ -56,69 +72,129 @@ export function RegisterAddressPage() {
             <h2 className="text-2xl font-bold text-[#1A1F1A]">Где вы живёте?</h2>
             <p className="text-sm text-[#7F8A80] mt-1">Укажите адрес для вызова курьера</p>
           </div>
+
+          {/* 1. Имя */}
           <Input
             label="Ваше имя"
             placeholder="Например: Иван"
             value={form.name}
+            error={errors.name}
             onChange={(e) => updateForm('name', e.target.value)}
           />
+
+          {/* 2. Корпус */}
           <Input
             label="Корпус"
-            placeholder="Например: 1А"
+            placeholder="Например: 2"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={4}
             value={form.building}
+            error={errors.building}
             onChange={(e) => updateForm('building', e.target.value)}
           />
+
+          {/* 3. Подъезд */}
           <Input
             label="Подъезд"
             placeholder="Например: 3"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={10}
             value={form.entrance}
+            error={errors.entrance}
             onChange={(e) => updateForm('entrance', e.target.value)}
           />
+
+          {/* 4. Этаж */}
           <Input
             label="Этаж"
             placeholder="Например: 7"
             type="number"
             inputMode="numeric"
+            min={1}
+            max={28}
             value={form.floor}
+            error={errors.floor}
             onChange={(e) => updateForm('floor', e.target.value)}
           />
+
+          {/* 5. Номер квартиры */}
           <Input
             label="Номер квартиры"
             placeholder="Например: 142"
             value={form.apartment_number}
+            error={errors.apartment_number}
             onChange={(e) => updateForm('apartment_number', e.target.value)}
           />
-          <Button
-            fullWidth
-            size="lg"
-            onClick={handleNext}
-            disabled={!consentGiven}
-            className={!consentGiven ? 'opacity-50 cursor-not-allowed' : ''}
-          >
-            Продолжить
-          </Button>
 
-          <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              id="consent"
-              checked={consentGiven}
-              onChange={(e) => setConsentGiven(e.target.checked)}
-              className="mt-1 w-5 h-5 accent-green-600 flex-shrink-0"
-            />
-            <label htmlFor="consent" className="text-sm text-gray-500">
+          {/* 6. Чекбокс согласия */}
+          <button
+            type="button"
+            onClick={() => { setConsentGiven((v) => !v); setConsentError(false) }}
+            className="flex items-start gap-3 text-left w-full"
+          >
+            <span
+              className={[
+                'mt-0.5 w-6 h-6 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-colors',
+                consentGiven
+                  ? 'bg-[#33A65A] border-[#33A65A]'
+                  : 'bg-white border-[#B0C4B4]',
+              ].join(' ')}
+            >
+              {consentGiven && (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path
+                    d="M2.5 7L5.5 10L11.5 4"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </span>
+            <span className="text-sm text-gray-500 leading-relaxed">
               Я соглашаюсь с{' '}
-              <a href="/privacy" target="_blank" className="text-green-600 underline">
+              <a
+                href="/privacy"
+                target="_blank"
+                className="text-green-600 underline"
+                onClick={(e) => e.stopPropagation()}
+              >
                 Политикой конфиденциальности
               </a>
               {' '}и{' '}
-              <a href="/legal" target="_blank" className="text-green-600 underline">
+              <a
+                href="/legal"
+                target="_blank"
+                className="text-green-600 underline"
+                onClick={(e) => e.stopPropagation()}
+              >
                 Публичной офертой
               </a>
               , и даю согласие на обработку персональных данных
-            </label>
+            </span>
+          </button>
+          {consentError && (
+            <p className="text-xs text-red-500 mt-1">Необходимо принять условия для продолжения</p>
+          )}
+
+          {/* 7. Кнопка — div-обёртка ловит тап когда кнопка disabled */}
+          <div onClick={() => { if (!consentGiven) setConsentError(true) }}>
+            <Button
+              fullWidth
+              size="lg"
+              disabled={!consentGiven}
+              onClick={handleNext}
+            >
+              Продолжить
+            </Button>
           </div>
 
+          {/* 8. Войти */}
           <button
             className="w-full text-center text-sm text-[#7F8A80] py-1 hover:text-[#33A65A] transition-colors"
             onClick={() => navigate('/register/email')}

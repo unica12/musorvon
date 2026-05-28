@@ -15,8 +15,8 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function formatAmount(kopecks: number): string {
-  return `${kopecks / 100} ₽`
+function formatAmount(rubles: number): string {
+  return `${rubles} ₽`
 }
 
 export function OrderCard({ order }: OrderCardProps) {

@@ -162,9 +162,11 @@ function PinScreen({ onUnlock }: { onUnlock: () => void }) {
 function OrderCard({
   order,
   onStatusChange,
+  onCancel,
 }: {
   order: AdminOrder
   onStatusChange: (id: string, status: string) => Promise<void>
+  onCancel: (id: string, apartmentNumber: string) => Promise<void>
 }) {
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -231,6 +233,16 @@ function OrderCard({
         </button>
       )}
 
+      {(order.status === 'paid' || order.status === 'in_progress') && !confirming && (
+        <button
+          onClick={() => void onCancel(order.id, apt?.apartment_number ?? '?')}
+          disabled={loading}
+          className="h-8 w-full rounded-xl border border-red-300 text-red-500 text-xs font-semibold hover:bg-red-50 transition-colors disabled:opacity-50"
+        >
+          Отменить
+        </button>
+      )}
+
       {confirming && (
         <div className="flex flex-col gap-2">
           <p className="text-sm text-center text-[#1A1F1A] font-medium">
@@ -255,6 +267,29 @@ function OrderCard({
       )}
     </div>
   )
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────────
+
+function notifyNewOrder() {
+  if ('vibrate' in navigator) {
+    navigator.vibrate([200, 100, 200])
+  }
+
+  const ctx = new AudioContext()
+  const oscillator = ctx.createOscillator()
+  const gainNode = ctx.createGain()
+
+  oscillator.connect(gainNode)
+  gainNode.connect(ctx.destination)
+
+  oscillator.frequency.setValueAtTime(880, ctx.currentTime)
+  oscillator.frequency.setValueAtTime(660, ctx.currentTime + 0.1)
+  gainNode.gain.setValueAtTime(0.3, ctx.currentTime)
+  gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+
+  oscillator.start(ctx.currentTime)
+  oscillator.stop(ctx.currentTime + 0.5)
 }
 
 // ─── Admin Dashboard ────────────────────────────────────────────────────────────
@@ -287,11 +322,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
     const interval = setInterval(() => { void fetchOrders() }, REFRESH_INTERVAL_MS)
 
-    // fetchOrders is stable (useCallback with no deps that change), safe to close over
     const channel = supabase
       .channel('admin-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
         void fetchOrders()
+        if (payload.eventType === 'INSERT') {
+          notifyNewOrder()
+          toast('🆕 Новый заказ!', { duration: 5000, icon: '🔔' })
+        }
       })
       .subscribe((status) => {
         setRealtimeLive(status === 'SUBSCRIBED')
@@ -318,6 +356,26 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
     )
     toast.success('Статус обновлён')
+  }
+
+  async function handleCancel(orderId: string, apartmentNumber: string) {
+    const confirmed = window.confirm(`Отменить заказ кв. ${apartmentNumber}?`)
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', orderId)
+
+    if (error) {
+      toast.error('Ошибка при отмене заказа')
+      return
+    }
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o)),
+    )
+    toast.success('Заказ отменён')
   }
 
   const filtered = activeTab === 'all'
@@ -393,7 +451,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         ) : (
           filtered.map((order) => (
-            <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} />
+            <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} onCancel={handleCancel} />
           ))
         )}
       </div>
