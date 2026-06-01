@@ -9,7 +9,30 @@
       "Bash(node scripts/generate-icons.mjs)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npm show *)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(mkdir -p /Users/unical/musorvon/musorvon/.vscode)",
+      "Bash(supabase functions *)",
+      "Bash(wait)",
+      "Bash(npx supabase *)",
+      "Bash(git -C /Users/unical/musorvon add musorvon/src/pages/PaymentPage.tsx musorvon/src/pages/PaymentSuccessPage.tsx musorvon/src/pages/HomePage.tsx musorvon/src/App.tsx musorvon/supabase/functions/create-payment/index.ts musorvon/supabase/functions/deno.json musorvon/.vscode/settings.json)",
+      "Bash(git -C /Users/unical/musorvon commit -m \"feat: YooKassa real payment integration with edge functions\")",
+      "Bash(git -C /Users/unical/musorvon push origin main)",
+      "Bash(git -C /Users/unical/musorvon add musorvon/src/pages/PaymentPage.tsx musorvon/src/pages/PaymentSuccessPage.tsx musorvon/src/pages/HomePage.tsx musorvon/src/App.tsx musorvon/supabase/functions/create-payment/index.ts musorvon/supabase/functions/deno.json)",
+      "Bash(git -C /Users/unical/musorvon add musorvon/src/App.tsx musorvon/supabase/functions/create-payment/index.ts)",
+      "Bash(git -C /Users/unical/musorvon commit -m \"fix: remove A2HS auto-prompt, add secrets validation in create-payment\")",
+      "Bash(chmod +x /Users/unical/musorvon/musorvon/deploy.sh)",
+      "Bash(./deploy.sh)",
+      "Bash(mkdir -p /Users/unical/musorvon/musorvon/supabase/functions/check-payment)",
+      "Bash(bash deploy.sh)",
+      "Bash(supabase --version)",
+      "Bash(shasum -a 256)"
+    ],
+    "additionalDirectories": [
+      "/Users/unical/musorvon/musorvon",
+      "/Users/unical/musorvon/musorvon/supabase/functions"
     ]
   }
 }

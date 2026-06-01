@@ -1,0 +1,17 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # каждый день в 9 утра UTC (12:00 МСК)
+  workflow_dispatch: # можно запустить вручную
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          curl -s "https://xsdukqgrgqaazuwsiwiw.supabase.co/rest/v1/apartments?limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -o /dev/null -w "Status: %{http_code}\n"
