@@ -13,7 +13,7 @@ function json(body: unknown, status = 200) {
   })
 }
 
-const PACKAGE_AMOUNTS: Record<string, number> = { '1': 100, '5': 400, '10': 700 }
+const PACKAGE_AMOUNTS: Record<string, number> = { '1': 10, '5': 400, '10': 700 }
 const PACKAGE_SIZES: Record<string, number>   = { '1': 1,   '5': 5,   '10': 10 }
 const PROMO_LIMIT = 3
 

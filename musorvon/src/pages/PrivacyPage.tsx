@@ -22,7 +22,7 @@ export function PrivacyPage() {
 
         <section className="flex flex-col gap-2">
           <h2 className="text-lg font-bold text-[#1A1F1A]">МусорВон — Политика конфиденциальности</h2>
-          <p className="text-sm text-[#7F8A80]">Последнее обновление: май 2025 г.</p>
+          <p className="text-sm text-[#7F8A80]">Последнее обновление: май 2026 г.</p>
         </section>
 
         <Section title="1. ОПЕРАТОР ПЕРСОНАЛЬНЫХ ДАННЫХ">

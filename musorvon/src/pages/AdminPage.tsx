@@ -7,9 +7,23 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
+import { createClient } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
-const ADMIN_PIN = '1234'
+const ADMIN_PIN_HASH = 'b893116caf501ac2084f4b86d87ca5384ab3fbb6929be14538d3fb5e49c31eec'
+
+const adminSupabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL as string,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string,
+)
+
+async function hashPin(pin: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(pin)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
 const SESSION_KEY = 'musorvon_admin_unlocked'
 const REFRESH_INTERVAL_MS = 30_000
 const MAX_PIN_ATTEMPTS = 5
@@ -60,7 +74,7 @@ function formatDate(iso: string) {
 // ─── PIN Screen ────────────────────────────────────────────────────────────────
 
 function getLockoutRemaining(): number {
-  const lockout = localStorage.getItem(LOCKOUT_KEY)
+  const lockout = sessionStorage.getItem(LOCKOUT_KEY)
   if (!lockout) return 0
   const remaining = LOCKOUT_DURATION_MS - (Date.now() - parseInt(lockout))
   return remaining > 0 ? remaining : 0
@@ -77,25 +91,26 @@ function PinScreen({ onUnlock }: { onUnlock: () => void }) {
     const t = setInterval(() => {
       const remaining = getLockoutRemaining()
       setLockoutMs(remaining)
-      if (remaining <= 0) localStorage.removeItem(LOCKOUT_KEY)
+      if (remaining <= 0) sessionStorage.removeItem(LOCKOUT_KEY)
     }, 1000)
     return () => clearInterval(t)
   }, [lockoutMs])
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (lockoutMs > 0) return
 
-    if (pin === ADMIN_PIN) {
-      localStorage.removeItem(ATTEMPTS_KEY)
-      localStorage.removeItem(LOCKOUT_KEY)
+    const pinHash = await hashPin(pin)
+    if (pinHash === ADMIN_PIN_HASH) {
+      sessionStorage.removeItem(ATTEMPTS_KEY)
+      sessionStorage.removeItem(LOCKOUT_KEY)
       sessionStorage.setItem(SESSION_KEY, '1')
       onUnlock()
     } else {
-      const attempts = parseInt(localStorage.getItem(ATTEMPTS_KEY) ?? '0') + 1
-      localStorage.setItem(ATTEMPTS_KEY, String(attempts))
+      const attempts = parseInt(sessionStorage.getItem(ATTEMPTS_KEY) ?? '0') + 1
+      sessionStorage.setItem(ATTEMPTS_KEY, String(attempts))
 
       if (attempts >= MAX_PIN_ATTEMPTS) {
-        localStorage.setItem(LOCKOUT_KEY, String(Date.now()))
+        sessionStorage.setItem(LOCKOUT_KEY, String(Date.now()))
         setLockoutMs(LOCKOUT_DURATION_MS)
         toast.error('Слишком много попыток. Попробуйте через 15 минут.')
       } else {
@@ -302,7 +317,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await adminSupabase
         .from('orders')
         .select(`*, apartments (building, entrance, floor, apartment_number, email)`)
         .order('created_at', { ascending: false })
@@ -342,7 +357,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }, [fetchOrders])
 
   async function handleStatusChange(orderId: string, status: string) {
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from('orders')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', orderId)
@@ -362,7 +377,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const confirmed = window.confirm(`Отменить заказ кв. ${apartmentNumber}?`)
     if (!confirmed) return
 
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from('orders')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', orderId)

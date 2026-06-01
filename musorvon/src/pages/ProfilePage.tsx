@@ -195,10 +195,10 @@ export function ProfilePage() {
           Написать нам в Telegram
         </a>
         <a
-          href="mailto:andreyzemsckoff@yandex.ru"
+          href="mailto:noreply@musor-von.ru"
           className="text-center text-sm text-[#7F8A80] underline"
         >
-          andreyzemsckoff@yandex.ru
+          noreply@musor-von.ru
         </a>
 
         {/* Sign Out */}

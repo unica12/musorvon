@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input'
 import { StatusBar } from '../components/layout/StatusBar'
 import { supabase } from '../lib/supabase'
 import { useAppStore } from '../store/useAppStore'
+import { ConsentModal } from '../components/ConsentModal'
 import { PENDING_ADDRESS_KEY } from './RegisterAddressPage'
 import type { PendingAddress } from './RegisterAddressPage'
 
@@ -27,6 +28,8 @@ export function RegisterPage() {
   const [otp, setOtp] = useState('')
   const [loading, setLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [showConsentModal, setShowConsentModal] = useState(false)
+  const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null)
 
   useEffect(() => {
     if (resendCooldown <= 0) return
@@ -38,6 +41,35 @@ export function RegisterPage() {
   useEffect(() => {
     if (otp.length === 6 && !loading) void handleVerifyOtp()
   }, [otp]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function navigateWithConsent(userId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any
+    const { data: existingConsent } = await db
+      .from('consents')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (!existingConsent) {
+      setVerifiedUserId(userId)
+      setShowConsentModal(true)
+      return
+    }
+
+    navigate('/home', { replace: true })
+  }
+
+  async function handleConsentAccept() {
+    if (!verifiedUserId) return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('consents').insert({
+      user_id: verifiedUserId,
+      consent_text: 'Согласие на обработку персональных данных v1.0 — май 2026',
+    })
+    setShowConsentModal(false)
+    navigate('/home', { replace: true })
+  }
 
   async function sendOtp() {
     const { error } = await withTimeout(
@@ -131,7 +163,7 @@ export function RegisterPage() {
 
         if (apartment) {
           useAppStore.getState().setApartment(apartment)
-          navigate('/home', { replace: true })
+          await navigateWithConsent(session.user.id)
         } else {
           toast.error('Заполните адрес для продолжения')
           navigate('/register/address', { replace: true })
@@ -153,7 +185,7 @@ export function RegisterPage() {
       if (existingApartment) {
         useAppStore.getState().setApartment(existingApartment)
         localStorage.removeItem(PENDING_ADDRESS_KEY)
-        navigate('/home', { replace: true })
+        await navigateWithConsent(session.user.id)
         return
       }
 
@@ -180,7 +212,7 @@ export function RegisterPage() {
       useAppStore.getState().setApartment(apartmentData)
       localStorage.removeItem(PENDING_ADDRESS_KEY)
       localStorage.setItem('musorvon_registered', 'true')
-      navigate('/home', { replace: true })
+      await navigateWithConsent(session.user.id)
     } catch (err) {
       console.error('[RegisterPage] handleVerifyOtp error:', err)
       toast.error('Ошибка. Попробуйте снова.')
@@ -223,6 +255,10 @@ export function RegisterPage() {
               Получить код
             </Button>
           </div>
+        )}
+
+        {showConsentModal && (
+          <ConsentModal onAccept={() => void handleConsentAccept()} />
         )}
 
         {step === 'code' && (

@@ -84,7 +84,7 @@ export function PaymentPage() {
             loading={loading}
             onClick={() => void handlePay()}
           >
-            Вызвать уборку — 100 ₽
+            Вызвать уборку — 10 ₽
           </Button>
         )}
 
